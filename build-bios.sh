@@ -20,6 +20,10 @@ sudo debootstrap --arch amd64 --cache-dir `pwd`/debootstrap-cache --include htop
 # Copy template files
 sudo cp -r template-files/* mnt
 
+# Set up fstab
+ROOT_BLOCK_DEVICE=`blkid -o value -s UUID /dev/loop0p1`
+echo "UUID=$ROOT_BLOCK_DEVICE	/	btrfs	default	0	1"  >> mnt/etc/fstab
+
 # Chroot phase
 sudo mount -t proc /proc mnt/proc/
 sudo mount -t sysfs /sys mnt/sys/
@@ -40,4 +44,3 @@ sudo umount mnt
 sudo losetup -d /dev/loop0
 #sudo rm debian.dd
 rm -rf mnt
-
