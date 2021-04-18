@@ -3,28 +3,30 @@
 # Stop on errors
 set -e
 
-# Prep block device as a drive
-truncate -s 5G debian.dd
+FILE_BLOCK_DEVICE_SIZE=2G
+
+echo "Prepping file block device"
+truncate -s $FILE_BLOCK_DEVICE_SIZE debian.dd
 sudo losetup --partscan --show --find debian.dd
 echo 'type=83' | sudo sfdisk /dev/loop0
 sudo mkfs.btrfs /dev/loop0p1
 mkdir mnt
 sudo mount /dev/loop0p1 mnt
 
-# Bootstrap the OS
+echo "Bootstrapping the OS"
 set +e
 mkdir debootstrap-cache
 set -e
 sudo debootstrap --arch amd64 --cache-dir `pwd`/debootstrap-cache --include htop,grub2,linux-image-amd64 buster mnt/ https://deb.debian.org/debian/ 
 
-# Copy template files
+echo "Copying template files"
 sudo cp -r template-files/* mnt
 
-# Set up fstab
+echo "Setting up fstab"
 ROOT_BLOCK_DEVICE=`blkid -o value -s UUID /dev/loop0p1`
 echo "UUID=$ROOT_BLOCK_DEVICE	/	btrfs	default	0	1"  >> mnt/etc/fstab
 
-# Chroot phase
+echo "Chroot phase"
 sudo mount -t proc /proc mnt/proc/
 sudo mount -t sysfs /sys mnt/sys/
 sudo mount -o bind /dev mnt/dev/
@@ -34,11 +36,13 @@ grub-install --root-directory=/ /dev/loop0 && \
 update-grub && \
 echo "root:password" | chpasswd'
 
+echo "Unmounting chroot mounts"
 # Unmount devices from chroot
 sudo umount mnt/proc/
 sudo umount mnt/sys/
 sudo umount mnt/dev/
 
+echo "Cleaning up loop mount and mount point"
 # Umount the block device
 sudo umount mnt
 sudo losetup -d /dev/loop0
