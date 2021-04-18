@@ -3,7 +3,7 @@
 # Stop on errors
 set -e
 
-FILE_BLOCK_DEVICE_SIZE=2G
+FILE_BLOCK_DEVICE_SIZE=3G
 
 echo "Prepping file block device"
 truncate -s $FILE_BLOCK_DEVICE_SIZE debian.dd
@@ -24,7 +24,7 @@ sudo cp -r template-files/* mnt
 
 echo "Setting up fstab"
 ROOT_BLOCK_DEVICE=`blkid -o value -s UUID /dev/loop0p1`
-echo "UUID=$ROOT_BLOCK_DEVICE	/	btrfs	default	0	1"  >> mnt/etc/fstab
+echo "UUID=$ROOT_BLOCK_DEVICE	/	btrfs	defaults	0	0"  >> mnt/etc/fstab
 
 echo "Chroot phase"
 sudo mount -t proc /proc mnt/proc/
