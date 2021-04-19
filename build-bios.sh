@@ -4,6 +4,7 @@
 set -e
 
 FILE_BLOCK_DEVICE_SIZE=3G
+HOSTNAME=debian-vm
 
 echo "Prepping file block device"
 truncate -s $FILE_BLOCK_DEVICE_SIZE debian.dd
@@ -21,6 +22,10 @@ sudo debootstrap --arch amd64 --cache-dir `pwd`/debootstrap-cache --include htop
 
 echo "Copying template files"
 sudo cp -r template-files/* mnt
+
+echo "Setting up hostname"
+echo "$HOSTNAME" > mnt/etc/hostname
+echo "127.0.1.1	$HOSTNAME" >> mnt/etc/hosts
 
 echo "Setting up fstab"
 ROOT_BLOCK_DEVICE=`blkid -o value -s UUID /dev/loop0p1`
