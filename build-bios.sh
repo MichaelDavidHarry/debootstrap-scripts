@@ -7,6 +7,9 @@ FILE_BLOCK_DEVICE_ROOT_PARTITION_SIZE=3G
 HOSTNAME=debian-vm
 BLOCK_DEVICE_ROOT_PARTITION=/dev/loop0p1
 BLOCK_DEVICE=/dev/loop0
+USER_NAME=user
+USER_PASSWORD=password
+ROOT_PASSWORD=password
 
 echo "Prepping file block device"
 truncate -s $FILE_BLOCK_DEVICE_ROOT_PARTITION_SIZE debian.dd
@@ -41,7 +44,9 @@ sudo chroot mnt /bin/bash -c "tasksel install standard && \
 apt install btrfs-progs -y && \
 grub-install --root-directory=/ \"$BLOCK_DEVICE\" && \
 update-grub && \
-echo \"root:password\" | chpasswd"
+echo \"root:$ROOT_PASSWORD\" | chpasswd && \
+useradd -m -s /bin/bash $USER_NAME && \
+echo \"$USER_NAME:$USER_PASSWORD\" | chpasswd"
 
 echo "Unmounting chroot mounts"
 # Unmount devices from chroot
