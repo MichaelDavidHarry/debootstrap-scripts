@@ -10,6 +10,8 @@ BLOCK_DEVICE=/dev/loop0
 USER_NAME=user
 USER_PASSWORD=password
 ROOT_PASSWORD=password
+LOCALE="en_US.UTF-8 UTF-8"
+LANG="en_US.UTF-8"
 
 echo "Prepping file block device"
 truncate -s $FILE_BLOCK_DEVICE_ROOT_PARTITION_SIZE debian.dd
@@ -23,7 +25,7 @@ echo "Bootstrapping the OS"
 set +e
 mkdir debootstrap-cache
 set -e
-sudo debootstrap --arch amd64 --cache-dir `pwd`/debootstrap-cache --include htop,grub2,linux-image-amd64 buster mnt/ https://deb.debian.org/debian/ 
+sudo debootstrap --arch amd64 --cache-dir `pwd`/debootstrap-cache --include grub2,linux-image-amd64 buster mnt/ https://deb.debian.org/debian/ 
 
 echo "Copying template files"
 sudo cp -r template-files/* mnt
@@ -41,6 +43,9 @@ sudo mount -t proc /proc mnt/proc/
 sudo mount -t sysfs /sys mnt/sys/
 sudo mount -o bind /dev mnt/dev/
 sudo chroot mnt /bin/bash -c "tasksel install standard && \
+echo \"$LOCALE\" >> /etc/locale.gen && \
+echo LANG=\"$LANG\" >> /etc/default/locale && \
+locale-gen && \
 apt install btrfs-progs -y && \
 grub-install --root-directory=/ \"$BLOCK_DEVICE\" && \
 update-grub && \
