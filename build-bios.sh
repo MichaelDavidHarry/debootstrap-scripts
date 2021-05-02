@@ -25,7 +25,7 @@ echo "Bootstrapping the OS"
 set +e
 mkdir debootstrap-cache
 set -e
-sudo debootstrap --arch amd64 --cache-dir `pwd`/debootstrap-cache --include grub2,linux-image-amd64 buster mnt/ https://deb.debian.org/debian/ 
+sudo debootstrap --arch amd64 --cache-dir `pwd`/debootstrap-cache --include grub2,linux-image-amd64,btrfs-progs buster mnt/ https://deb.debian.org/debian/ 
 
 echo "Copying template files"
 sudo cp -r template-files/* mnt
@@ -46,7 +46,6 @@ sudo chroot mnt /bin/bash -c "tasksel install standard && \
 echo \"$LOCALE\" >> /etc/locale.gen && \
 echo LANG=\"$LANG\" >> /etc/default/locale && \
 locale-gen && \
-apt install btrfs-progs -y && \
 grub-install --root-directory=/ \"$BLOCK_DEVICE\" && \
 update-grub && \
 echo \"root:$ROOT_PASSWORD\" | chpasswd && \
