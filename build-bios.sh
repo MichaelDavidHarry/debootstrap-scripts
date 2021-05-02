@@ -25,7 +25,7 @@ echo "Bootstrapping the OS"
 set +e
 mkdir debootstrap-cache
 set -e
-sudo debootstrap --arch amd64 --cache-dir `pwd`/debootstrap-cache --include grub2,linux-image-amd64,btrfs-progs buster mnt/ https://deb.debian.org/debian/ 
+sudo debootstrap --arch amd64 --cache-dir `pwd`/debootstrap-cache --include grub2,linux-image-amd64,btrfs-progs,sudo buster mnt/ https://deb.debian.org/debian/ 
 
 echo "Copying template files"
 sudo cp -r template-files/* mnt
@@ -50,7 +50,8 @@ grub-install --root-directory=/ \"$BLOCK_DEVICE\" && \
 update-grub && \
 echo \"root:$ROOT_PASSWORD\" | chpasswd && \
 useradd -m -s /bin/bash $USER_NAME && \
-echo \"$USER_NAME:$USER_PASSWORD\" | chpasswd"
+echo \"$USER_NAME:$USER_PASSWORD\" | chpasswd && \
+usermod -aG sudo $USER_NAME"
 
 echo "Unmounting chroot mounts"
 # Unmount devices from chroot
