@@ -58,7 +58,8 @@ echo "Setting up fstab"
 echo "/dev/mapper/$LVM_VG_NAME-root	/	btrfs	defaults	0	0"  >> mnt/etc/fstab
 echo "/dev/mapper/$LVM_VG_NAME-swap   none   swap   defaults   0   0" >> mnt/etc/fstab
 
-echo "$CRYPT_DM_NAME UUID=$CRYPT_BLOCK_DEVICE_UUID none luks" >> mnt/etc/crypttab
+echo "Setting up crypttab"
+echo "$CRYPT_DM_NAME UUID=$CRYPT_BLOCK_DEVICE_UUID /etc/keys/root.key luks,key-slot=1" >> mnt/etc/crypttab
 
 echo "Chroot phase"
 sudo mount -t proc /proc mnt/proc/
@@ -69,7 +70,6 @@ sudo chroot mnt /bin/bash -c "tasksel install standard && \
 echo \"$LOCALE\" >> /etc/locale.gen && \
 echo LANG=\"$LANG\" >> /etc/default/locale && \
 locale-gen && \
-update-initramfs -u -k all && \
 echo 'GRUB_ENABLE_CRYPTODISK=y' >> /etc/default/grub && \
 grub-install --root-directory=/ \"$BLOCK_DEVICE\" && \
 update-grub && \
@@ -77,6 +77,15 @@ echo \"root:$ROOT_PASSWORD\" | chpasswd && \
 useradd -m -s /bin/bash $USER_NAME && \
 echo \"$USER_NAME:$USER_PASSWORD\" | chpasswd && \
 usermod -aG sudo $USER_NAME"
+
+# Make a keyfile and add it to the LUKS container so the encryption password will not have to be entered twice when the system boots. Update cryptsetup-initramfs so the keyfile will be copied into the initramfs when that is generated.
+mkdir -m0700 mnt/etc/keys
+( umask 0077 && dd if=/dev/urandom bs=1 count=64 of=mnt/etc/keys/root.key conv=fsync )
+echo -n "$ENCRYPTION_PASSWORD" | sudo cryptsetup luksAddKey $BLOCK_DEVICE_CRYPT_PARTITION mnt/etc/keys/root.key 
+echo "KEYFILE_PATTERN=\"/etc/keys/*.key\"" >> mnt/etc/cryptsetup-initramfs/conf-hook
+echo UMASK=0077 >> mnt/etc/initramfs-tools/initramfs.conf
+
+sudo chroot mnt /bin/bash -c "update-initramfs -u -k all"
 
 echo "Unmounting chroot mounts"
 # Unmount devices from chroot
