@@ -59,12 +59,25 @@ sudo mkswap "/dev/$LVM_VG_NAME/swap"
 mkdir mnt
 sudo mount "/dev/$LVM_VG_NAME/root" mnt
 
+echo "Create and mount BTRFS subvolumes"
+sudo btrfs subvolume create mnt/@
+sudo btrfs subvolume create mnt/@-snapshots
+sudo btrfs subvolume create mnt/@home
+sudo btrfs subvolume create mnt/@home-snapshots
+sudo btrfs subvolume create mnt/@log
+sudo btrfs subvolume create mnt/@log-snapshots
+sudo umount mnt
+sudo mount "/dev/$LVM_VG_NAME/root" -o subvol=@ mnt
+mkdir -p mnt/home mnt/var/log /mnt/.btrfs
+sudo mount "/dev/$LVM_VG_NAME/root" -o subvol=@home mnt/home
+sudo mount "/dev/$LVM_VG_NAME/root" -o subvol=@log mnt/var/log
+
 echo "Bootstrapping the OS"
 # debootstrap-cache directory may already exist, it's alright if it does
 set +e
 mkdir debootstrap-cache
 set -e
-PACKAGES="grub2,linux-image-amd64,btrfs-progs,sudo,lvm2,cryptsetup-bin,cryptsetup-initramfs,cryptsetup-run"
+PACKAGES="grub2,linux-image-amd64,btrfs-progs,sudo,lvm2,cryptsetup-bin,cryptsetup-initramfs,cryptsetup-run,snapper"
 if [ "$USE_EFI" = true ];
 then
 	PACKAGES="$PACKAGES,grub-efi-amd64-bin"
@@ -79,8 +92,14 @@ echo "$HOSTNAME" > mnt/etc/hostname
 echo "127.0.1.1	$HOSTNAME" >> mnt/etc/hosts
 
 echo "Setting up fstab"
-echo "/dev/mapper/$LVM_VG_NAME-root	/	btrfs	defaults	0	0"  >> mnt/etc/fstab
+echo "/dev/mapper/$LVM_VG_NAME-root	/	btrfs	defaults,subvol=@	0	0"  >> mnt/etc/fstab
 echo "/dev/mapper/$LVM_VG_NAME-swap   none   swap   defaults   0   0" >> mnt/etc/fstab
+echo "/dev/mapper/$LVM_VG_NAME-root     /.btrfs       btrfs   defaults       0       0"  >> mnt/etc/fstab
+echo "/dev/mapper/$LVM_VG_NAME-root     /.snapshots       btrfs   defaults,subvol=@-snapshots       0       0"  >> mnt/etc/fstab
+echo "/dev/mapper/$LVM_VG_NAME-root     /home       btrfs   defaults,subvol=@home       0       0"  >> mnt/etc/fstab
+echo "/dev/mapper/$LVM_VG_NAME-root     /home/.snapshots       btrfs   defaults,subvol=@home-snapshots       0       0"  >> mnt/etc/fstab
+echo "/dev/mapper/$LVM_VG_NAME-root     /var/log       btrfs   defaults,subvol=@log       0       0"  >> mnt/etc/fstab
+echo "/dev/mapper/$LVM_VG_NAME-root     /var/log/.snapshots       btrfs   defaults,subvol=@log-snapshots       0       0"  >> mnt/etc/fstab
 
 if [ "$USE_EFI" = true ];
 then
@@ -108,7 +127,7 @@ then
 	GRUB_EFI_OPTIONS="--target=x86_64-efi --efi-directory=/boot/efi --removable"
 fi
 
-sudo chroot mnt /bin/bash -c "tasksel install standard && \
+sudo chroot mnt /bin/bash -c "set -e && tasksel install standard && \
 echo \"$LOCALE\" >> /etc/locale.gen && \
 echo LANG=\"$LANG\" >> /etc/default/locale && \
 locale-gen && \
@@ -118,7 +137,21 @@ update-grub && \
 echo \"root:$ROOT_PASSWORD\" | chpasswd && \
 useradd -m -s /bin/bash $USER_NAME && \
 echo \"$USER_NAME:$USER_PASSWORD\" | chpasswd && \
-usermod -aG sudo $USER_NAME"
+usermod -aG sudo $USER_NAME && \
+snapper --no-dbus -c root create-config --fstype btrfs / && \
+snapper --no-dbus -c home create-config --fstype btrfs /home && \
+snapper --no-dbus -c log create-config --fstype btrfs /var/log && \
+rm -rf /.snapshots && \
+mkdir .snapshots && \
+mount .snapshots && \
+rm -rf /home/.snapshots && \
+mkdir /home/.snapshots && \
+mount /home/.snapshots && \
+chmod 750 /home/.snapshots && \
+rm -rf /var/log/.snapshots && \
+mkdir /var/log/.snapshots && \
+mount /var/log/.snapshots && \
+chmod 750 /var/log/.snapshots"
 
 # Make a keyfile and add it to the LUKS container so the encryption password will not have to be entered twice when the system boots. Update cryptsetup-initramfs so the keyfile will be copied into the initramfs when that is generated.
 mkdir -m0700 mnt/etc/keys
@@ -127,7 +160,11 @@ echo -n "$ENCRYPTION_PASSWORD" | sudo cryptsetup luksAddKey $BLOCK_DEVICE_CRYPT_
 echo "KEYFILE_PATTERN=\"/etc/keys/*.key\"" >> mnt/etc/cryptsetup-initramfs/conf-hook
 echo UMASK=0077 >> mnt/etc/initramfs-tools/initramfs.conf
 
-sudo chroot mnt /bin/bash -c "update-initramfs -u -k all"
+echo "Updating initramfs"
+sudo chroot mnt /bin/bash -c "set -e && update-initramfs -u -k all && \
+snapper --no-dbus -c root create --description initial && \
+snapper --no-dbus -c home create --description initial && \
+snapper --no-dbus -c log create --description initial"
 
 echo "Unmounting chroot mounts"
 # Unmount devices from chroot
@@ -135,6 +172,11 @@ sudo umount mnt/proc/
 sudo umount mnt/sys/
 sudo umount mnt/dev/
 sudo umount mnt/run/
+sudo umount mnt/home/.snapshots
+sudo umount mnt/home
+sudo umount mnt/var/log/.snapshots
+sudo umount mnt/var/log
+sudo umount mnt/.snapshots
 if [ "$USE_EFI" = true ];
 then
 	sudo umount mnt/boot/efi
