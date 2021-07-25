@@ -3,15 +3,15 @@
 # Set up constants
 FILE_BLOCK_DEVICE_SIZE=3G
 HOSTNAME=debian-vm
-BLOCK_DEVICE_CRYPT_PARTITION=/dev/loop0p1
+BLOCK_DEVICE_CRYPT_PARTITION=/dev/loop0p2
 BLOCK_DEVICE=/dev/loop0
 USER_NAME=user
 USER_PASSWORD=password
 ROOT_PASSWORD=password
 LOCALE="en_US.UTF-8 UTF-8"
 LANG="en_US.UTF-8"
-CRYPT_DM_NAME="cryptlvm"
-LVM_VG_NAME="vg"
+CRYPT_DM_NAME="cryptlvm1"
+LVM_VG_NAME="vg1"
 ENCRYPTION_PASSWORD="crypt"
 SWAP_SIZE=128M
 
@@ -22,19 +22,13 @@ BLOCK_EFI_PARTITION=/dev/loop0p1
 # Stop on errors
 set -e
 
-# When EFI is in use, the first partition is used as the EFI partition, and the second partition is the encrypted root
-if [ "$USE_EFI" = true ];
-then
-	BLOCK_DEVICE_CRYPT_PARTITION=/dev/loop0p2
-fi
-
 echo "Prepping file block device"
 truncate -s $FILE_BLOCK_DEVICE_SIZE debian.dd
 sudo losetup --partscan --show --find debian.dd
 if [ "$USE_EFI" = true ];
 then
 	echo "Create EFI partition and root partition"
-	echo $',100M,ef\n,,83' | sudo sfdisk /dev/loop0
+	echo $',100M,ef\n,,83' | sudo sfdisk "$BLOCK_DEVICE"
 	sudo mkfs.fat -F32 $BLOCK_EFI_PARTITION
 	EFI_BLOCK_DEVICE_UUID=`blkid -o value -s UUID "$BLOCK_EFI_PARTITION"`
 else
@@ -120,7 +114,7 @@ sudo mount -o bind /run mnt/run/
 if [ "$USE_EFI" = true ];
 then
 	mkdir -p mnt/boot/efi
-	sudo mount /dev/loop0p1 mnt/boot/efi
+	sudo mount "$BLOCK_EFI_PARTITION" mnt/boot/efi
 fi
 
 GRUB_EFI_OPTIONS=""
