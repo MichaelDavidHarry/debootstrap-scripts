@@ -27,6 +27,7 @@ sudo umount ./mnt/home/.snapshots
 sudo umount ./mnt/var/log
 sudo umount ./mnt/var/log/.snapshots
 sudo umount ./mnt/.snapshots
+sudo umount ./mnt/.btrfs
 
 sudo umount mnt
 sudo vgchange -an "/dev/$LVM_VG_NAME"

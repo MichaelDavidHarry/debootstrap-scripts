@@ -68,7 +68,9 @@ sudo btrfs subvolume create mnt/@log
 sudo btrfs subvolume create mnt/@log-snapshots
 sudo umount mnt
 sudo mount "/dev/$LVM_VG_NAME/root" -o subvol=@ mnt
-mkdir -p mnt/home mnt/var/log /mnt/.btrfs
+mkdir -p mnt/home mnt/var/log mnt/.btrfs
+sudo mount "/dev/$LVM_VG_NAME/root" mnt/.btrfs
+chmod 700 mnt/.btrfs
 sudo mount "/dev/$LVM_VG_NAME/root" -o subvol=@home mnt/home
 sudo mount "/dev/$LVM_VG_NAME/root" -o subvol=@log mnt/var/log
 
@@ -177,6 +179,7 @@ sudo umount mnt/home
 sudo umount mnt/var/log/.snapshots
 sudo umount mnt/var/log
 sudo umount mnt/.snapshots
+sudo umount mnt/.btrfs
 if [ "$USE_EFI" = true ];
 then
 	sudo umount mnt/boot/efi
