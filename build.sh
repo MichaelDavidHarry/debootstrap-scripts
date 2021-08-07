@@ -73,7 +73,7 @@ echo "Bootstrapping the OS"
 set +e
 mkdir debootstrap-cache
 set -e
-PACKAGES="grub2,linux-image-amd64,btrfs-progs,sudo,lvm2,cryptsetup-bin,cryptsetup-initramfs,cryptsetup-run,snapper"
+PACKAGES="grub2,linux-image-amd64,btrfs-progs,sudo,lvm2,cryptsetup-bin,cryptsetup-initramfs,cryptsetup-run,snapper,console-setup"
 if [ "$USE_EFI" = true ];
 then
 	PACKAGES="$PACKAGES,grub-efi-amd64-bin"
