@@ -14,6 +14,7 @@ CRYPT_DM_NAME="cryptlvm1"
 LVM_VG_NAME="vg1"
 ENCRYPTION_PASSWORD="crypt"
 SWAP_SIZE=128M
+ENABLE_SERIAL_CONSOLE=true
 
 # EFI-specific options
 USE_EFI=true
@@ -122,7 +123,10 @@ if [ "$USE_EFI" = true ];
 then
 	GRUB_EFI_OPTIONS="--target=x86_64-efi --efi-directory=/boot/efi --removable"
 fi
-
+if [ "$ENABLE_SERIAL_CONSOLE" = true ];
+then
+	sudo chroot mnt /bin/bash -c "systemctl enable serial-getty@ttyS0.service"
+fi
 sudo chroot mnt /bin/bash -c "set -e && tasksel install standard && \
 echo \"$LOCALE\" >> /etc/locale.gen && \
 echo LANG=\"$LANG\" >> /etc/default/locale && \
