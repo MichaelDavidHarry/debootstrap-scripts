@@ -18,7 +18,10 @@ sudo umount ./mnt/.btrfs
 sudo umount mnt
 sudo vgchange -an "/dev/$LVM_VG_NAME"
 sudo cryptsetup luksClose "$CRYPT_DM_NAME"
-sudo losetup -d "$BLOCK_DEVICE"
+if [ "$USE_LOOPMOUNT_DEVICE" = true ];
+then
+    sudo losetup -d "$BLOCK_DEVICE"
+fi
 
 sudo rm -rf mnt
 sudo rm debian.dd

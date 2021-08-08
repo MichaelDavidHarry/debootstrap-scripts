@@ -7,8 +7,11 @@ source "`dirname $0`/config.sh"
 set -e
 
 echo "Prepping file block device"
-truncate -s $FILE_BLOCK_DEVICE_SIZE debian.dd
-sudo losetup --partscan --show --find debian.dd
+if [ "$USE_LOOPMOUNT_DEVICE" = true ];
+then
+	truncate -s $FILE_BLOCK_DEVICE_SIZE debian.dd
+	sudo losetup --partscan --show --find debian.dd
+fi
 if [ "$USE_EFI" = true ];
 then
 	echo "Create EFI partition and root partition"
@@ -110,7 +113,11 @@ if [ "$ENABLE_SERIAL_CONSOLE" = true ];
 then
 	sudo chroot mnt /bin/bash -c "systemctl enable serial-getty@ttyS0.service"
 fi
-sudo chroot mnt /bin/bash -c "set -e && tasksel install standard && \
+sudo chroot mnt /bin/bash -c "set -e && \
+echo \"$TIMEZONE\" > /etc/timezone && \
+rm /etc/localtime && \
+ln -s /usr/share/zoneinfo/\"$TIMEZONE\" /etc/localtime && \
+tasksel install standard && \
 echo \"$LOCALE\" >> /etc/locale.gen && \
 echo LANG=\"$LANG\" >> /etc/default/locale && \
 locale-gen && \
@@ -170,7 +177,12 @@ echo "Cleaning up loop mount and mount point"
 sudo umount mnt
 sudo vgchange -an "/dev/$LVM_VG_NAME"
 sudo cryptsetup luksClose "$CRYPT_DM_NAME"
-sudo losetup -d "$BLOCK_DEVICE"
+
+if [ "$USE_LOOPMOUNT_DEVICE" = true ];
+then
+	sudo losetup -d "$BLOCK_DEVICE"
+fi
+
 #sudo rm debian.dd
 rm -rf mnt
 sudo chmod 777 debian.dd
