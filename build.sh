@@ -10,7 +10,9 @@ echo "Prepping file block device"
 if [ "$USE_LOOPMOUNT_DEVICE" = true ];
 then
 	truncate -s $FILE_BLOCK_DEVICE_SIZE debian.dd
-	sudo losetup --partscan --show --find debian.dd
+	BLOCK_DEVICE=`sudo losetup --partscan --show --find debian.dd`
+	BLOCK_EFI_PARTITION="${BLOCK_DEVICE}p1"
+	BLOCK_DEVICE_CRYPT_PARTITION="${BLOCK_DEVICE}p2"
 fi
 if [ "$USE_EFI" = true ];
 then
@@ -185,4 +187,8 @@ fi
 
 #sudo rm debian.dd
 rm -rf mnt
-sudo chmod 777 debian.dd
+
+if [ "$USE_LOOPMOUNT_DEVICE" = true ];
+then
+	sudo chmod 777 debian.dd
+fi
