@@ -67,7 +67,7 @@ if [ "$USE_EFI" = true ];
 then
 	PACKAGES="$PACKAGES,grub-efi-amd64-bin"
 fi
-sudo debootstrap --arch amd64 --cache-dir `pwd`/debootstrap-cache --include "$PACKAGES" buster mnt/ https://deb.debian.org/debian/ 
+sudo debootstrap --arch amd64 --cache-dir `pwd`/debootstrap-cache --include "$PACKAGES" bullseye mnt/ https://deb.debian.org/debian/ 
 
 echo "Copying template files"
 sudo cp -r template-files/* mnt
